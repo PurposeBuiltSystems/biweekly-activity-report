@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Biweekly Activity Report</title>
+
+  <!-- Office.js -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <!-- MSAL Browser (provides createNestablePublicClientApplication for NAA) -->
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js"></script>
+
+  <link rel="stylesheet" href="taskpane.css" />
+</head>
+<body>
+  <header class="app-head">
+    <h1>Biweekly Activity Report</h1>
+    <p class="sub">Your meetings and sent email, turned into a timesheet diary.</p>
+  </header>
+
+  <section class="controls">
+    <div class="row">
+      <label>Days back
+        <input id="daysBack" type="number" min="1" max="60" value="14" />
+      </label>
+      <label>Hours mode
+        <select id="mode">
+          <option value="standard">Standard day</option>
+          <option value="span">Activity span</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label>Standard day (h)
+        <input id="standardDay" type="number" min="0" max="24" step="0.5" value="8" />
+      </label>
+      <label>Max day (h)
+        <input id="maxDay" type="number" min="0" max="24" step="0.5" value="11" />
+      </label>
+    </div>
+    <div class="row">
+      <label>Work start <input id="workStart" type="time" value="08:00" /></label>
+      <label>Work end <input id="workEnd" type="time" value="16:30" /></label>
+    </div>
+    <label class="check"><input id="countReceived" type="checkbox" checked /> Count days I only received email as worked</label>
+    <button id="generate" class="primary">Generate report</button>
+  </section>
+
+  <section id="status" class="status" hidden></section>
+
+  <section id="output" class="output" hidden>
+    <div class="actions">
+      <button id="copy">Copy</button>
+      <button id="copyText">Copy as text</button>
+      <button id="draft" class="primary">Save to Drafts</button>
+    </div>
+    <div id="preview"></div>
+  </section>
+
+  <!-- Load logic in order: data layer, pure report builder, then UI wiring.
+       ?v= cache-buster — bump on each deploy so the Outlook webview fetches fresh JS. -->
+  <script src="../graph.js?v=4"></script>
+  <script src="../report.js?v=4"></script>
+  <script src="taskpane.js?v=4"></script>
+</body>
+</html>

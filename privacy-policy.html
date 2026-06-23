@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Biweekly Activity Report</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, sans-serif; margin: 3rem auto; max-width: 44rem; padding: 0 1rem; color: #242424; line-height: 1.55; }
+    h1 { color: #0f6cbd; }
+    h2 { margin-top: 2rem; }
+    code { background: #f3f2f1; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .muted { color: #616161; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy</h1>
+  <p class="muted">Add-in: <strong>Biweekly Activity Report</strong> · Last updated: June 2026</p>
+
+  <p><strong>Summary: this add-in does not collect, store, transmit, sell, or share
+     any personal data.</strong> It has no servers, no accounts, no analytics, and
+     no third-party trackers. Your calendar and email data never leave the Microsoft
+     365 boundary.</p>
+
+  <h2>What the add-in does</h2>
+  <p>Biweekly Activity Report adds a button to the Outlook message ribbon. When you
+     open the task pane and click <strong>Generate report</strong>, it reads your own
+     calendar events and sent/received email over the date range you choose and
+     builds a timesheet-style activity diary (meetings, emails sent, and estimated
+     hours). You can copy the report or save it as a draft email in your own mailbox.</p>
+
+  <h2>Data we collect</h2>
+  <p><strong>None.</strong> The add-in does not collect, log, or retain any
+     information about you, your calendar, your email, or your usage. The report is
+     built in your own Outlook session and is not transmitted to us.</p>
+
+  <h2>How your data is handled</h2>
+  <p>When you generate a report, the add-in signs you in (Microsoft nested app
+     authentication) and uses <strong>Microsoft Graph</strong> — Microsoft's own
+     Microsoft 365 service — to read your calendar and mail. The data travels only
+     between your mailbox and Microsoft Graph and is processed entirely in your
+     browser/Outlook client to assemble the report. <strong>It stays entirely within
+     the Microsoft 365 boundary.</strong></p>
+  <p><strong>There is no PurposeBuilt Systems server in this process, and no third
+     party receives your data.</strong> The add-in connects directly to Microsoft
+     Graph from your own client; we never see, receive, store, or proxy your calendar
+     or email. The add-in accesses only the signed-in user's own mailbox (delegated
+     permissions) — never anyone else's.</p>
+
+  <h2>The generated report and drafts</h2>
+  <p>The report is held only in memory in your task pane while open. If you choose
+     <em>Save to Drafts</em>, the add-in writes the report as a draft email in your
+     own mailbox via Microsoft Graph — it is not sent anywhere and is not addressed
+     to anyone unless you choose to send it. If you choose <em>Copy</em>, the report
+     is placed on your own device clipboard. Nothing is uploaded to us.</p>
+
+  <h2>Hosting</h2>
+  <p>The add-in's program files (a small amount of HTML, JavaScript, and icon
+     images) are served as static files from GitHub Pages. This host only delivers
+     those program files to Outlook; it does not, and technically cannot, receive
+     your calendar or email content back. Standard web-server access logs kept by the
+     hosting provider may record routine request metadata (such as the file
+     requested), but never any calendar or email content.</p>
+
+  <h2>Cookies and tracking</h2>
+  <p>The add-in sets no cookies and uses no analytics or advertising technologies.</p>
+
+  <h2>Permissions</h2>
+  <p>The add-in uses the Outlook <code>read item</code> permission and the Microsoft
+     Graph <code>Calendars.Read</code> and <code>Mail.ReadWrite</code>
+     <em>delegated</em> permissions. <code>Calendars.Read</code> lets it read your
+     calendar events; <code>Mail.ReadWrite</code> lets it read your sent/received
+     mail and (only if you ask) save the report as a draft in your mailbox.
+     "Delegated" means the add-in acts only as the signed-in user and can reach only
+     that user's own mailbox — never other people's data. No application-level or
+     mailbox-wide access is requested.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the updated version will be posted at this URL with a
+     revised "Last updated" date.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy: <a href="mailto:Matthew@purposebuilt.systems">Matthew@purposebuilt.systems</a></p>
+</body>
+</html>

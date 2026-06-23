@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support — Biweekly Activity Report</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, sans-serif; margin: 3rem auto; max-width: 44rem; padding: 0 1rem; color: #242424; line-height: 1.55; }
+    h1 { color: #0f6cbd; }
+    h2 { margin-top: 2rem; }
+    code { background: #f3f2f1; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .muted { color: #616161; }
+  </style>
+</head>
+<body>
+  <h1>Support</h1>
+  <p class="muted">Add-in: <strong>Biweekly Activity Report</strong></p>
+
+  <h2>What it does</h2>
+  <p>Adds a <strong>Biweekly Report</strong> button to the Outlook message ribbon.
+     It reads your own calendar events and sent/received email over a date range and
+     builds a timesheet-style activity diary — meetings, emails sent, and estimated
+     hours per day — which you can copy or save as a draft email.</p>
+
+  <h2>How to use it</h2>
+  <ol>
+    <li>Open any message in Outlook and click <strong>Biweekly Report</strong> on the ribbon.</li>
+    <li>In the task pane, set the date range and options, then click <strong>Generate report</strong>.</li>
+    <li>Sign in / consent the first time (Microsoft prompt). The add-in only reads your own mailbox and calendar.</li>
+    <li>Review the report. Use <strong>Copy</strong> to copy it, or <strong>Save to Drafts</strong> to create a draft email in your mailbox.</li>
+  </ol>
+
+  <h2>Options</h2>
+  <ul>
+    <li><strong>Hours mode:</strong> <em>Standard day</em> credits a worked weekday at
+        your standard length (default 8h), extended for overtime; <em>Activity span</em>
+        uses the actual time from your first to last activity that day.</li>
+    <li><strong>Standard day / Max day:</strong> the base length of a worked day and the
+        cap on any single day.</li>
+    <li><strong>Work start / end:</strong> your normal hours, used to detect overtime.</li>
+    <li><strong>Count receive-only days:</strong> whether days you only received email
+        (no sent email or meetings) count as worked.</li>
+  </ul>
+
+  <h2>Troubleshooting</h2>
+  <ul>
+    <li><strong>Button doesn't appear:</strong> make sure you're on a Microsoft 365 /
+        Exchange Online account viewing a message. Very old Outlook builds may not be supported.</li>
+    <li><strong>Hours look off:</strong> they are estimates — adjust the Hours mode,
+        standard-day length, or the receive-only toggle to match how you work, and
+        always review before submitting a timesheet.</li>
+    <li><strong>No meetings shown:</strong> the add-in reads your calendars; if your
+        meetings are on a calendar you don't own or in a separate mailbox, they may
+        not appear.</li>
+  </ul>
+
+  <h2>Privacy</h2>
+  <p>Your calendar and email never leave Microsoft 365 — the report is built in your
+     own Outlook session and we never receive your data. See the
+     <a href="privacy-policy.html">Privacy Policy</a>.</p>
+
+  <h2>Contact</h2>
+  <p>For help or to report an issue, email
+     <a href="mailto:Matthew@purposebuilt.systems">Matthew@purposebuilt.systems</a>.</p>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Biweekly Activity Report - Outlook add-in (add-in only / XML manifest).
+
+  One ribbon button (on the message-read surface) opens a task pane that reads
+  the SIGNED-IN user's calendar + sent mail over the last N days via Microsoft
+  Graph, builds a timesheet diary, and lets the user copy it or save it as a
+  Drafts email. Replaces the disabled VBA macro BuildBiWeeklyActivityReport.
+
+  Sign-in uses nested app authentication (MSAL) — no backend. Delegated scopes:
+  Calendars.Read + Mail.ReadWrite (own mailbox only). Files are hosted on GitHub
+  Pages; this manifest points at the hosted program files.
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+  xsi:type="MailApp">
+
+  <Id>0a66cac5-5635-422a-b9d4-3feb70bab579</Id>
+  <Version>1.0.2.0</Version>
+  <ProviderName>PurposeBuiltSystems</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Biweekly Activity Report" />
+  <Description DefaultValue="Turn your meetings and sent email into a biweekly timesheet diary." />
+  <IconUrl DefaultValue="https://purposebuiltsystems.github.io/biweekly-activity-report/assets/icon-64.png" />
+  <HighResolutionIconUrl DefaultValue="https://purposebuiltsystems.github.io/biweekly-activity-report/assets/icon-128.png" />
+  <SupportUrl DefaultValue="https://purposebuiltsystems.github.io/biweekly-activity-report/support.html" />
+
+  <AppDomains>
+    <AppDomain>https://purposebuiltsystems.github.io</AppDomain>
+    <AppDomain>https://login.microsoftonline.com</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.5" />
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://purposebuiltsystems.github.io/biweekly-activity-report/src/taskpane/taskpane.html?v=4" />
+        <RequestedHeight>250</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <!-- ReadItem only: the add-in never reads the open message; all data comes
+       from Graph (delegated Calendars.Read + Mail.ReadWrite, own mailbox). -->
+  <Permissions>ReadItem</Permissions>
+
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+  </Rule>
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.5">
+        <bt:Set Name="Mailbox" />
+      </bt:Sets>
+    </Requirements>
+
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="barGroup">
+                <Label resid="GroupLabel" />
+                <Control xsi:type="Button" id="openReportButton">
+                  <Label resid="ButtonLabel" />
+                  <Supertip>
+                    <Title resid="ButtonLabel" />
+                    <Description resid="ButtonTip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16" />
+                    <bt:Image size="32" resid="Icon.32" />
+                    <bt:Image size="80" resid="Icon.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://purposebuiltsystems.github.io/biweekly-activity-report/assets/icon-16.png" />
+        <bt:Image id="Icon.32" DefaultValue="https://purposebuiltsystems.github.io/biweekly-activity-report/assets/icon-32.png" />
+        <bt:Image id="Icon.80" DefaultValue="https://purposebuiltsystems.github.io/biweekly-activity-report/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://purposebuiltsystems.github.io/biweekly-activity-report/src/taskpane/taskpane.html?v=4" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GroupLabel" DefaultValue="Activity Report" />
+        <bt:String id="ButtonLabel" DefaultValue="Biweekly Report" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="ButtonTip" DefaultValue="Build a timesheet diary from your meetings and sent email over the last two weeks." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>
