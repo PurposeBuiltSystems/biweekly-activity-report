@@ -14,6 +14,9 @@
     byId("copy").addEventListener("click", copyHtml);
     byId("copyText").addEventListener("click", copyText);
     byId("draft").addEventListener("click", saveDraft);
+    // Phone-width panes: start with the options folded so the primary
+    // action and the report get the space.
+    if (window.innerWidth < 480) { byId("options").removeAttribute("open"); }
   });
 
   function byId(id) { return document.getElementById(id); }
@@ -54,6 +57,12 @@
       lastReport = Report.build(data, cfg);
       byId("preview").innerHTML = Report.renderHtml(lastReport);
       byId("output").hidden = false;
+      // Fold the options away and bring the report into view — matters most
+      // in the narrow mobile pane where the controls eat the viewport.
+      byId("options").removeAttribute("open");
+      if (byId("output").scrollIntoView) {
+        byId("output").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
 
       // Diagnostics: show exactly what Graph returned so we can verify the data.
       var d = data.diagnostics || { counts: {}, errors: [] };

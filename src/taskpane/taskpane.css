@@ -3,9 +3,32 @@
   --muted: #616161;
   --accent: #0f6cbd;
   --accent-dark: #0c5aa0;
+  --accent-soft: #eff6fc;
   --line: #e1dfdd;
+  --bg: #ffffff;
   --bg-soft: #f3f2f1;
+  --btn-bg: #ffffff;
   --weekend: #faf9f8;
+  --error-bg: #fde7e9;
+  --error-fg: #a4262c;
+}
+
+/* Outlook mobile and the New Outlook pane both follow the OS theme. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #f3f2f1;
+    --muted: #a19f9d;
+    --accent: #479ef5;
+    --accent-dark: #62abf5;
+    --accent-soft: #1e3a5f;
+    --line: #3b3a39;
+    --bg: #1b1a19;
+    --bg-soft: #2d2c2b;
+    --btn-bg: #2d2c2b;
+    --weekend: #232221;
+    --error-bg: #5c2124;
+    --error-fg: #f1a7ab;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -13,6 +36,7 @@
 body {
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--fg);
+  background: var(--bg);
   margin: 0;
   padding: 12px;
   font-size: 14px;
@@ -21,18 +45,57 @@ body {
 .app-head h1 { font-size: 17px; margin: 0 0 2px; }
 .app-head .sub { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
 
-.controls { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-.controls .row { display: flex; gap: 8px; margin-bottom: 8px; }
-.controls label { flex: 1; display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 3px; }
-.controls input, .controls select { padding: 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 14px; }
-.controls .check { display: flex; flex-direction: row; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
-.controls .check input { width: auto; }
+.controls { margin-bottom: 10px; }
+
+/* Options fold: settings are set-once, so they collapse out of the way. */
+.options {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  margin-top: 8px;
+}
+.options summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-size: 13px;
+  color: var(--accent-dark);
+  user-select: none;
+}
+.options[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.options .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.options label {
+  flex: 1 1 120px;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: var(--muted);
+  gap: 3px;
+}
+.options input, .options select {
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--fg);
+}
+.options .check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.options .check input { width: auto; }
+
 .day.empty { opacity: 0.7; }
 .note { color: var(--muted); font-size: 12px; font-style: italic; margin: 4px 0; }
 
 button {
   padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px;
-  background: #fff; color: var(--fg); cursor: pointer; font-size: 13px;
+  background: var(--btn-bg); color: var(--fg); cursor: pointer; font-size: 13px;
 }
 button:hover { background: var(--bg-soft); }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -41,12 +104,35 @@ button:disabled { opacity: 0.5; cursor: default; }
 .controls .primary { width: 100%; }
 
 .status { padding: 8px 10px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; }
-.status.info { background: #eff6fc; color: var(--accent-dark); }
-.status.error { background: #fde7e9; color: #a4262c; }
+.status.info { background: var(--accent-soft); color: var(--accent-dark); }
+.status.error { background: var(--error-bg); color: var(--error-fg); }
 .status.work { background: var(--bg-soft); color: var(--muted); }
+.status.work::before {
+  content: "";
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 2px solid var(--muted);
+  border-top-color: transparent;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: -2px;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.actions { display: flex; gap: 6px; margin-bottom: 10px; }
-.actions button { flex: 1; }
+/* Keep Copy / Save reachable while scrolling a long report. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  padding: 6px 0;
+  z-index: 2;
+}
+.actions button { flex: 1 1 30%; }
 
 /* report */
 .bar-report h2 { font-size: 16px; margin: 0 0 2px; }
@@ -72,3 +158,11 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 .totals { border-top: 2px solid var(--line); margin-top: 8px; padding-top: 8px; font-size: 13px; }
 .totals .grand { font-size: 15px; margin-top: 4px; }
+
+/* Touch devices: bigger targets, and 16px inputs so iOS doesn't zoom on focus. */
+@media (pointer: coarse) {
+  .options input, .options select { font-size: 16px; padding: 10px; }
+  .options summary { padding: 12px 0; }
+  button { min-height: 44px; font-size: 15px; }
+  .day summary { padding: 4px 0; }
+}
