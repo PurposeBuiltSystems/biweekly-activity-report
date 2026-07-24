@@ -40,7 +40,16 @@
     mode: "standard",       // "standard" | "span"
     countReceivedAsWork: true,
     fillerProse: false,     // off: honest notes instead of "I was continuing work…"
+    listReceived: true,     // list received subjects (reading email is work too)
+    projectName: "",        // label for the project filter (optional)
+    projectKeywords: [],    // substrings; when set, matching items are tagged 📌
+    projectOnly: false,     // true: report contains ONLY project-matched activity
+    sentEmailMin: 5,        // est. minutes per project-matched sent email
+    recvEmailMin: 2,        // est. minutes per project-matched received email
   };
+
+  // Obvious machine mail — kept in counts, left out of the received listing.
+  var AUTOMATED_RE = /no-?reply|do-?not-?reply|donotreply|notifications?@|mailer|postmaster|newsletter|marketing@|updates@|alerts?@|automated|unsubscribe|@e\.|@email\.|@mail\./i;
 
   // --- helpers ---------------------------------------------------------------
 
@@ -92,6 +101,15 @@
     var sent = (data.sent || []).slice();
     var received = (data.received || []).slice();
 
+    var kws = (c.projectKeywords || []).map(function (k) {
+      return String(k || "").toLowerCase().trim();
+    }).filter(Boolean);
+    var projectActive = kws.length > 0;
+    function pMatch() {
+      var text = Array.prototype.slice.call(arguments).join(" ").toLowerCase();
+      return projectActive && kws.some(function (k) { return text.indexOf(k) !== -1; });
+    }
+
     var workStartMin = parseClock(c.workStart);
     var workEndMin = parseClock(c.workEnd);
 
@@ -128,10 +146,36 @@
         .sort(function (a, b) { return a.sentOn - b.sentOn; });
       ds.forEach(function (e) { var to = (e.to || "").trim(); if (to) contacts[to] = (contacts[to] || 0) + 1; });
 
-      // received count
-      var receivedCount = received.filter(function (e) {
+      // received (full items now — subjects are work evidence too)
+      var dr = received.filter(function (e) {
         return e.receivedOn >= dayStart && e.receivedOn < dayEnd;
-      }).length;
+      }).sort(function (a, b) { return a.receivedOn - b.receivedOn; });
+      var receivedCount = dr.length;
+      var drListed = dr.filter(function (e) {
+        return !AUTOMATED_RE.test((e.fromAddress || "") + " " + (e.from || ""));
+      });
+      var automatedCount = receivedCount - drListed.length;
+
+      // project matching
+      var pjMeetings = timed.filter(function (m) { return pMatch(m.subject); });
+      var pjSent = ds.filter(function (e) { return pMatch(e.subject, e.to); });
+      var pjRecv = drListed.filter(function (e) { return pMatch(e.subject, e.from, e.fromAddress); });
+      var pjMeetingHours = mergedHours(pjMeetings.map(function (m) { return { start: m.start, end: m.end }; }));
+      var pjHours = projectActive
+        ? round25(pjMeetingHours + (pjSent.length * c.sentEmailMin + pjRecv.length * c.recvEmailMin) / 60)
+        : 0;
+
+      if (projectActive && c.projectOnly) {
+        // The report becomes the project's evidence file: only matched items,
+        // hours = matched meetings + the per-email estimate (stated in output).
+        timed = pjMeetings;
+        allDay = allDay.filter(function (m) { return pMatch(m.subject); });
+        ds = pjSent;
+        drListed = pjRecv;
+        receivedCount = pjRecv.length;
+        automatedCount = 0;
+        meetingHours = pjMeetingHours;
+      }
 
       // activity marks (your active output) for span / overtime
       var marks = [];
@@ -147,7 +191,10 @@
 
       // --- hours ---
       var hours = 0;
-      if (worked) {
+      if (projectActive && c.projectOnly) {
+        worked = timed.length > 0 || ds.length > 0 || drListed.length > 0;
+        hours = pjHours;
+      } else if (worked) {
         if (c.mode === "span") {
           hours = clamp(spanH, c.minActive, c.maxDay);
         } else if (weekend) {
@@ -189,11 +236,19 @@
         date: dayStart, longDate: longDate(dayStart), isoDate: isoDate(dayStart),
         weekend: weekend, worked: worked,
         meetings: timed.map(function (m) {
-          return { time: hhmm(m.start) + "–" + hhmm(m.end), subject: m.subject, recurring: !!m.isRecurring };
+          return { time: hhmm(m.start) + "–" + hhmm(m.end), subject: m.subject,
+            recurring: !!m.isRecurring, project: pMatch(m.subject) };
         }),
         allDay: allDay.map(function (m) { return m.subject; }),
-        sent: ds.map(function (e) { return { time: hhmm(e.sentOn), to: e.to || "(recipient not shown)", subject: e.subject }; }),
+        sent: ds.map(function (e) { return { time: hhmm(e.sentOn), to: e.to || "(recipient not shown)",
+          subject: e.subject, project: pMatch(e.subject, e.to) }; }),
+        received: c.listReceived ? drListed.map(function (e) {
+          return { time: hhmm(e.receivedOn), from: e.from || "(sender not shown)",
+            subject: e.subject, project: pMatch(e.subject, e.from, e.fromAddress) };
+        }) : [],
+        automatedCount: automatedCount,
         receivedCount: receivedCount,
+        projectHours: pjHours,
         emailWindow: (first && last && (ds.length || timed.length)) ? hhmm(first) + "–" + hhmm(last) : "",
         note: note,
         hours: hours,
@@ -203,6 +258,26 @@
     totals.estimatedHours = round2(totals.estimatedHours);
     totals.meetingHours = round2(totals.meetingHours);
 
+    var project = null;
+    if (projectActive) {
+      var pHours = 0, pMeet = 0, pSent2 = 0, pRecv2 = 0;
+      days.forEach(function (d) {
+        pHours += d.projectHours;
+        d.meetings.forEach(function (m) { if (m.project) { pMeet++; } });
+        d.sent.forEach(function (e) { if (e.project) { pSent2++; } });
+        (d.received || []).forEach(function (e) { if (e.project) { pRecv2++; } });
+      });
+      project = {
+        name: c.projectName || kws.join(", "),
+        keywords: kws,
+        hours: round2(pHours),
+        meetings: pMeet, sent: pSent2, received: pRecv2,
+        only: !!c.projectOnly,
+        assumption: "Email time estimated at " + c.sentEmailMin + " min/sent and " +
+          c.recvEmailMin + " min/received project email.",
+      };
+    }
+
     var topContacts = Object.keys(contacts)
       .map(function (k) { return { to: k, count: contacts[k] }; })
       .sort(function (a, b) { return b.count - a.count; }).slice(0, 5);
@@ -211,7 +286,7 @@
       rangeStart: rangeStart, rangeEnd: today,
       rangeLabel: isoDate(rangeStart) + " to " + isoDate(today),
       days: days, weekTotals: weekTotals.map(round2), totals: totals,
-      topContacts: topContacts, config: c,
+      topContacts: topContacts, project: project, config: c,
     };
   }
 
@@ -219,6 +294,12 @@
 
   function renderText(r) {
     var out = "Activity diary for " + r.rangeLabel + "\n";
+    if (r.project) {
+      out += (r.project.only ? "FILTERED TO PROJECT: " : "Project: ") + r.project.name +
+        " \u2014 " + r.project.hours.toFixed(2) + " project hours (" +
+        r.project.meetings + " meetings, " + r.project.sent + " sent, " +
+        r.project.received + " received)\n" + r.project.assumption + "\n";
+    }
     out += "Estimated total: " + r.totals.estimatedHours.toFixed(2) + " hours across " +
       r.totals.daysWorked + " active days\n\n";
     r.days.forEach(function (day) {
@@ -239,7 +320,16 @@
         day.sent.forEach(function (e) { out += "    • " + e.time + " — To: " + e.to + " — " + e.subject + "\n"; });
         if (day.emailWindow) out += "  Activity window: " + day.emailWindow + "\n";
       }
-      if (day.receivedCount) out += "  Emails received: " + day.receivedCount + "\n";
+      if (day.received && day.received.length) {
+        out += "  Received:\n";
+        day.received.slice(0, 10).forEach(function (e) {
+          out += "    \u2022 " + e.time + " \u2014 " + e.from + " \u2014 " + e.subject +
+            (e.project ? " [project]" : "") + "\n";
+        });
+        if (day.received.length > 10) { out += "    \u2026 and " + (day.received.length - 10) + " more\n"; }
+        if (day.automatedCount) { out += "    (+" + day.automatedCount + " automated)\n"; }
+      } else if (day.receivedCount) { out += "  Emails received: " + day.receivedCount + "\n"; }
+      if (day.projectHours) { out += "  Project time: " + day.projectHours.toFixed(2) + " h\n"; }
       if (day.note) out += "  " + day.note + "\n";
       out += "\n";
     });
@@ -262,6 +352,12 @@
     h.push(stat(t.emailsReceived, "received"));
     if (t.meetingCount) h.push(stat(t.meetingCount, "meetings"));
     h.push("</div>");
+    if (r.project) {
+      h.push('<p class="project-line">\ud83d\udccc ' + (r.project.only ? "Filtered to project: " : "Project: ") +
+        "<b>" + escapeHtml(r.project.name) + "</b> \u2014 <b>" + r.project.hours.toFixed(2) +
+        " h</b> (" + r.project.meetings + " meetings \u00b7 " + r.project.sent + " sent \u00b7 " +
+        r.project.received + " received)<br><span class=\"muted\">" + escapeHtml(r.project.assumption) + "</span></p>");
+    }
     if (t.busiestDay) {
       h.push('<p class="muted">Busiest day: ' + escapeHtml(t.busiestDay) + " (" +
         t.busiestDayHours.toFixed(2) + " h).</p>");
@@ -283,7 +379,8 @@
         h.push("<ul>");
         day.meetings.forEach(function (m) {
           h.push("<li><b>" + escapeHtml(m.time) + "</b> — " + escapeHtml(m.subject) +
-            (m.recurring ? ' <span class="tag">recurring</span>' : "") + "</li>");
+            (m.recurring ? ' <span class="tag">recurring</span>' : "") +
+            (m.project ? ' <span class="tag project">\ud83d\udccc</span>' : "") + "</li>");
         });
         h.push("</ul>");
       }
@@ -294,11 +391,22 @@
         h.push("<details><summary>" + day.sent.length + " email" + (day.sent.length === 1 ? "" : "s") +
           " sent" + (day.emailWindow ? " · " + escapeHtml(day.emailWindow) : "") + "</summary><ul>");
         day.sent.forEach(function (e) {
-          h.push("<li><b>" + escapeHtml(e.time) + "</b> → " + escapeHtml(e.to) + " — " + escapeHtml(e.subject) + "</li>");
+          h.push("<li><b>" + escapeHtml(e.time) + "</b> → " + escapeHtml(e.to) + " — " + escapeHtml(e.subject) +
+            (e.project ? ' <span class="tag project">\ud83d\udccc</span>' : "") + "</li>");
         });
         h.push("</ul></details>");
       }
-      if (day.receivedCount) h.push('<p class="muted">' + day.receivedCount + " emails received</p>");
+      if (day.received && day.received.length) {
+        h.push("<details><summary>" + day.received.length + " email" + (day.received.length === 1 ? "" : "s") +
+          " received" + (day.automatedCount ? " (+" + day.automatedCount + " automated)" : "") + "</summary><ul>");
+        day.received.slice(0, 20).forEach(function (e) {
+          h.push("<li><b>" + escapeHtml(e.time) + "</b> ← " + escapeHtml(e.from) + " — " + escapeHtml(e.subject) +
+            (e.project ? ' <span class="tag project">\ud83d\udccc</span>' : "") + "</li>");
+        });
+        if (day.received.length > 20) { h.push("<li>… and " + (day.received.length - 20) + " more</li>"); }
+        h.push("</ul></details>");
+      } else if (day.receivedCount) { h.push('<p class="muted">' + day.receivedCount + " emails received</p>"); }
+      if (day.projectHours) { h.push('<p class="muted">\ud83d\udccc Project time: <b>' + day.projectHours.toFixed(2) + " h</b></p>"); }
       if (day.note) h.push('<p class="note">' + escapeHtml(day.note) + "</p>");
       h.push("</div>");
     });

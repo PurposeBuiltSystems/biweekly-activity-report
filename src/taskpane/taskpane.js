@@ -8,9 +8,31 @@
   "use strict";
 
   var lastReport = null;
+  var SETTINGS_KEY = "bar.settings";
 
   Office.onReady(function () {
     byId("generate").addEventListener("click", generate);
+    try {
+      var saved = JSON.parse(Office.context.roamingSettings.get(SETTINGS_KEY) || "{}");
+      ["projectName", "projectKeywords", "sentEmailMin", "recvEmailMin"].forEach(function (k) {
+        if (saved[k] != null && saved[k] !== "") { byId(k).value = saved[k]; }
+      });
+      if (saved.projectOnly) { byId("projectOnly").checked = true; }
+    } catch (e) { /* defaults */ }
+    ["projectName", "projectKeywords", "projectOnly", "sentEmailMin", "recvEmailMin"].forEach(function (id) {
+      byId(id).addEventListener("change", function () {
+        try {
+          Office.context.roamingSettings.set(SETTINGS_KEY, JSON.stringify({
+            projectName: byId("projectName").value,
+            projectKeywords: byId("projectKeywords").value,
+            projectOnly: byId("projectOnly").checked,
+            sentEmailMin: byId("sentEmailMin").value,
+            recvEmailMin: byId("recvEmailMin").value,
+          }));
+          Office.context.roamingSettings.saveAsync(function () {});
+        } catch (e) { /* session-only */ }
+      });
+    });
     byId("copy").addEventListener("click", copyHtml);
     byId("copyText").addEventListener("click", copyText);
     byId("draft").addEventListener("click", saveDraft);
@@ -38,6 +60,12 @@
       workStart: byId("workStart").value || "08:00",
       workEnd: byId("workEnd").value || "16:30",
       countReceivedAsWork: byId("countReceived").checked,
+      listReceived: byId("listReceived").checked,
+      projectName: byId("projectName").value.trim(),
+      projectKeywords: byId("projectKeywords").value.split(",").map(function (k) { return k.trim(); }).filter(Boolean),
+      projectOnly: byId("projectOnly").checked,
+      sentEmailMin: clampInt(byId("sentEmailMin").value, 0, 60, 5),
+      recvEmailMin: clampInt(byId("recvEmailMin").value, 0, 60, 2),
     };
   }
 

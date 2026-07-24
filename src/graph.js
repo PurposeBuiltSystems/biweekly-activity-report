@@ -227,11 +227,14 @@
       var recvFilter = "receivedDateTime ge " + startUtc + " and receivedDateTime lt " + endUtc;
       var recvPath = "/me/mailFolders/inbox/messages?$filter=" +
         encodeURIComponent(recvFilter) +
-        "&$select=from,receivedDateTime&$orderby=receivedDateTime&$top=500";
+        "&$select=from,subject,receivedDateTime&$orderby=receivedDateTime&$top=500";
       var recvRaw = await graphAll(token, recvPath, prefer);
       received = recvRaw.map(function (mi) {
+        var ea = (mi.from && mi.from.emailAddress) || {};
         return {
-          from: (mi.from && mi.from.emailAddress && mi.from.emailAddress.name) || "",
+          from: ea.name || ea.address || "",
+          fromAddress: (ea.address || "").toLowerCase(),
+          subject: mi.subject || "(no subject)",
           receivedOn: parseLocal(mi.receivedDateTime),
         };
       });

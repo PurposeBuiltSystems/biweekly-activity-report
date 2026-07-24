@@ -166,3 +166,8 @@ button:disabled { opacity: 0.5; cursor: default; }
   button { min-height: 44px; font-size: 15px; }
   .day summary { padding: 4px 0; }
 }
+
+.proj { border: 1px solid var(--border, #e1e1e1); border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
+.proj-h { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
+.bar-report .tag.project { background: #fff3e6; color: #b25000; }
+.bar-report .project-line { background: #fff8f0; border-left: 3px solid #e8751a; padding: 6px 10px; border-radius: 4px; }

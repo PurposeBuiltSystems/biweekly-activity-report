@@ -11,7 +11,7 @@
   <!-- MSAL Browser (provides createNestablePublicClientApplication for NAA) -->
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js"></script>
 
-  <link rel="stylesheet" href="taskpane.css?v=5" />
+  <link rel="stylesheet" href="taskpane.css?v=6" />
 </head>
 <body>
   <header class="app-head">
@@ -47,6 +47,25 @@
         <label>Work end <input id="workEnd" type="time" value="16:30" /></label>
       </div>
       <label class="check"><input id="countReceived" type="checkbox" checked /> Count days I only received email as worked</label>
+      <label class="check"><input id="listReceived" type="checkbox" checked /> List received email subjects (reading is work too)</label>
+      <div class="proj">
+        <div class="proj-h">\ud83d\udccc Project / grant filter (for billing &amp; in-kind reporting)</div>
+        <label>Project name (label on the report)
+          <input id="projectName" type="text" placeholder="TPF-5(372) BIM pooled fund" />
+        </label>
+        <label>Keywords (comma separated \u2014 matched in subjects &amp; names)
+          <input id="projectKeywords" type="text" placeholder="BIM, pooled fund, TPF-5" />
+        </label>
+        <label class="check"><input id="projectOnly" type="checkbox" /> Report ONLY project activity (billing evidence mode)</label>
+        <div class="row">
+          <label>Min/sent email
+            <input id="sentEmailMin" type="number" min="0" max="60" value="5" />
+          </label>
+          <label>Min/received email
+            <input id="recvEmailMin" type="number" min="0" max="60" value="2" />
+          </label>
+        </div>
+      </div>
     </details>
   </section>
 
@@ -63,8 +82,8 @@
 
   <!-- Load logic in order: data layer, pure report builder, then UI wiring.
        ?v= cache-buster — bump on each deploy so the Outlook webview fetches fresh JS. -->
-  <script src="../graph.js?v=5"></script>
-  <script src="../report.js?v=5"></script>
-  <script src="taskpane.js?v=5"></script>
+  <script src="../graph.js?v=6"></script>
+  <script src="../report.js?v=6"></script>
+  <script src="taskpane.js?v=6"></script>
 </body>
 </html>
