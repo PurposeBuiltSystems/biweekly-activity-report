@@ -11,7 +11,7 @@
   <!-- MSAL Browser (provides createNestablePublicClientApplication for NAA) -->
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js"></script>
 
-  <link rel="stylesheet" href="taskpane.css?v=6" />
+  <link rel="stylesheet" href="taskpane.css?v=7" />
 </head>
 <body>
   <header class="app-head">
@@ -82,8 +82,8 @@
 
   <!-- Load logic in order: data layer, pure report builder, then UI wiring.
        ?v= cache-buster — bump on each deploy so the Outlook webview fetches fresh JS. -->
-  <script src="../graph.js?v=6"></script>
-  <script src="../report.js?v=6"></script>
-  <script src="taskpane.js?v=6"></script>
+  <script src="../graph.js?v=7"></script>
+  <script src="../report.js?v=7"></script>
+  <script src="taskpane.js?v=7"></script>
 </body>
 </html>

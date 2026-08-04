@@ -11,7 +11,7 @@
   var SETTINGS_KEY = "bar.settings";
 
   Office.onReady(function () {
-    byId("generate").addEventListener("click", generate);
+    on("generate", "click", generate);
     try {
       var saved = JSON.parse(Office.context.roamingSettings.get(SETTINGS_KEY) || "{}");
       ["projectName", "projectKeywords", "sentEmailMin", "recvEmailMin"].forEach(function (k) {
@@ -20,7 +20,7 @@
       if (saved.projectOnly) { byId("projectOnly").checked = true; }
     } catch (e) { /* defaults */ }
     ["projectName", "projectKeywords", "projectOnly", "sentEmailMin", "recvEmailMin"].forEach(function (id) {
-      byId(id).addEventListener("change", function () {
+      on(id, "change", function () {
         try {
           Office.context.roamingSettings.set(SETTINGS_KEY, JSON.stringify({
             projectName: byId("projectName").value,
@@ -33,15 +33,28 @@
         } catch (e) { /* session-only */ }
       });
     });
-    byId("copy").addEventListener("click", copyHtml);
-    byId("copyText").addEventListener("click", copyText);
-    byId("draft").addEventListener("click", saveDraft);
+    on("copy", "click", copyHtml);
+    on("copyText", "click", copyText);
+    on("draft", "click", saveDraft);
     // Phone-width panes: start with the options folded so the primary
     // action and the report get the space.
     if (window.innerWidth < 480) { byId("options").removeAttribute("open"); }
   });
 
   function byId(id) { return document.getElementById(id); }
+
+  /**
+   * Outlook caches the pane HTML but the ?v= query string makes it fetch
+   * JavaScript fresh, so a returning user can run today's JS against
+   * yesterday's page. Binding through this helper means a missing element
+   * costs one feature instead of throwing and leaving every later button
+   * unbound — a whole dead pane.
+   */
+  function on(id, ev, fn) {
+    var el = byId(id);
+    if (el) { el.addEventListener(ev, fn); }
+    return el;
+  }
 
   function setStatus(kind, text) {
     var el = byId("status");

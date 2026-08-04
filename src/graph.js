@@ -42,13 +42,34 @@
     return pcaPromise;
   }
 
+  /**
+   * Sign-in must never hang the pane. An un-timed await on the popup flow
+   * leaves a button disabled with nothing visible happening — which reads
+   * to the user as "the button does nothing" and gives them nothing to act
+   * on. Fail loudly instead, naming the two things that actually fix it.
+   */
+  function withTimeout(promise, ms, message) {
+    var timer;
+    return Promise.race([
+      promise.then(function (v) { clearTimeout(timer); return v; },
+                   function (e) { clearTimeout(timer); throw e; }),
+      new Promise(function (_, reject) {
+        timer = setTimeout(function () { reject(new Error(message)); }, ms);
+      }),
+    ]);
+  }
+
   async function getToken() {
-    var pca = await getPca();
+    var pca = await withTimeout(getPca(), 20000,
+      "Sign-in didn't start. Fully quit Outlook (Cmd+Q) and reopen, then try again.");
     try {
-      var silent = await pca.acquireTokenSilent({ scopes: SCOPES });
-      return silent.accessToken;
+      return (await withTimeout(pca.acquireTokenSilent({ scopes: SCOPES }), 20000, "silent timeout")).accessToken;
     } catch (e) {
-      var interactive = await pca.acquireTokenPopup({ scopes: SCOPES });
+      var interactive = await withTimeout(
+        pca.acquireTokenPopup({ scopes: SCOPES }), 120000,
+        "Sign-in didn't finish. A Microsoft sign-in window may have opened behind Outlook — " +
+        "check for it (or Mission Control), finish signing in, and click again. If no window " +
+        "appeared at all, fully quit Outlook (Cmd+Q), reopen, and retry.");
       return interactive.accessToken;
     }
   }
