@@ -10,24 +10,61 @@
   var lastReport = null;
   var SETTINGS_KEY = "bar.settings";
 
+  /**
+   * Account row. Certification policy 1100.5.7.1 requires a visible way out
+   * wherever an add-in signs a user in. Every element access is guarded:
+   * Outlook desktop caches the pane HTML while ?v= fetches fresh JS, so this
+   * code can run against a page that predates these controls, and an
+   * unguarded dereference here would throw inside Office.onReady and take
+   * the whole pane down as "Add-in Error".
+   */
+  function authSet(id, k, v) { var e = document.getElementById(id); if (e) { e[k] = v; } }
+
+  async function renderAuthState() {
+    var who = null;
+    try { who = await GraphData.currentAccount(); } catch (e) { who = null; }
+    authSet("authWho", "textContent", who ? ("Signed in as " + who) : "Not signed in");
+    authSet("signOut", "hidden", !who);
+    authSet("signIn", "hidden", !!who);
+  }
+
+  async function doSignOut() {
+    authSet("signOut", "disabled", true);
+    try {
+      await GraphData.signOut();
+      authSet("authWho", "textContent", "Signed out \u2014 this add-in's saved tokens are cleared. " +
+        "Your Outlook session is separate and is not affected; no add-in can end it.");
+    } catch (e) {
+      authSet("authWho", "textContent", "Sign-out failed: " + ((e && e.message) || e));
+    } finally {
+      authSet("signOut", "disabled", false);
+      setTimeout(renderAuthState, 2500);
+    }
+  }
+
+
   Office.onReady(function () {
+    // Certification 1100.5.7.1 - sign-out must be reachable.
+    var _so = document.getElementById("signOut");
+    if (_so) { _so.addEventListener("click", doSignOut); }
+    renderAuthState();
     on("generate", "click", generate);
     try {
       var saved = JSON.parse(Office.context.roamingSettings.get(SETTINGS_KEY) || "{}");
       ["projectName", "projectKeywords", "sentEmailMin", "recvEmailMin"].forEach(function (k) {
         if (saved[k] != null && saved[k] !== "") { byId(k).value = saved[k]; }
       });
-      if (saved.projectOnly) { byId("projectOnly").checked = true; }
+      if (saved.projectOnly) { setProp("projectOnly", "checked", true); }
     } catch (e) { /* defaults */ }
     ["projectName", "projectKeywords", "projectOnly", "sentEmailMin", "recvEmailMin"].forEach(function (id) {
       on(id, "change", function () {
         try {
           Office.context.roamingSettings.set(SETTINGS_KEY, JSON.stringify({
-            projectName: byId("projectName").value,
-            projectKeywords: byId("projectKeywords").value,
-            projectOnly: byId("projectOnly").checked,
-            sentEmailMin: byId("sentEmailMin").value,
-            recvEmailMin: byId("recvEmailMin").value,
+            projectName: val("projectName"),
+            projectKeywords: val("projectKeywords"),
+            projectOnly: isChecked("projectOnly"),
+            sentEmailMin: val("sentEmailMin"),
+            recvEmailMin: val("recvEmailMin"),
           }));
           Office.context.roamingSettings.saveAsync(function () {});
         } catch (e) { /* session-only */ }
@@ -38,10 +75,25 @@
     on("draft", "click", saveDraft);
     // Phone-width panes: start with the options folded so the primary
     // action and the report get the space.
-    if (window.innerWidth < 480) { byId("options").removeAttribute("open"); }
+    if (window.innerWidth < 480) { rmAttrIf("options", "open"); }
   });
 
   function byId(id) { return document.getElementById(id); }
+
+  /**
+   * Guarded element access. Outlook desktop caches the pane HTML far harder
+   * than the web client while ?v= still fetches today's JavaScript, so startup
+   * routinely runs new code against an old page. One unguarded
+   * `byId(x).value` there throws inside Office.onReady, and Outlook reports
+   * that as "Add-in Error" - the whole pane, not one field. This is the exact
+   * cause of certification finding 1120.3.7.8 on a sibling add-in.
+   */
+  function val(id) { var el = byId(id); return el ? el.value : ""; }
+  function setVal(id, v) { var el = byId(id); if (el) { el.value = v; } }
+  function setProp(id, k, v) { var el = byId(id); if (el) { el[k] = v; } }
+  function setAttrIf(id, n, v) { var el = byId(id); if (el) { el.setAttribute(n, v); } }
+  function rmAttrIf(id, n) { var el = byId(id); if (el) { el.removeAttribute(n); } }
+  function isChecked(id) { var el = byId(id); return !!(el && el.checked); }
 
   /**
    * Outlook caches the pane HTML but the ?v= query string makes it fetch

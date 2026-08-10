@@ -43,6 +43,42 @@
   }
 
   /**
+   * Signed-in account, or null. Lets the pane say who is signed in and
+   * decide whether Sign out has anything to act on.
+   */
+  async function currentAccount() {
+    try {
+      var pca = await getPca();
+      var accts = (pca.getAllAccounts && pca.getAllAccounts()) || [];
+      return accts.length ? (accts[0].username || accts[0].name || "signed in") : null;
+    } catch (e) { return null; }
+  }
+
+  /**
+   * Sign out of the ADD-IN. Certification policy 1100.5.7.1 requires a way
+   * out wherever there is a way in. Under nested app authentication Outlook
+   * owns the session and no add-in can end it, so this clears every token
+   * and account this add-in has cached - and the pane says exactly that
+   * rather than implying more than it does.
+   */
+  async function signOut() {
+    var pca = null;
+    try { pca = await getPca(); } catch (e) { /* nothing cached to clear */ }
+    if (pca) {
+      var accts = (pca.getAllAccounts && pca.getAllAccounts()) || [];
+      for (var i = 0; i < accts.length; i++) {
+        try {
+          if (pca.clearCache) { await pca.clearCache({ account: accts[i] }); }
+          else if (pca.logoutPopup) { await pca.logoutPopup({ account: accts[i] }); }
+        } catch (e) { /* keep clearing the rest */ }
+      }
+    }
+    pcaPromise = null;   // force a fresh broker handshake next time
+    return true;
+  }
+
+
+  /**
    * Sign-in must never hang the pane. An un-timed await on the popup flow
    * leaves a button disabled with nothing visible happening — which reads
    * to the user as "the button does nothing" and gives them nothing to act
@@ -284,6 +320,8 @@
   }
 
   var GraphData = {
+    signOut: signOut,
+    currentAccount: currentAccount,
     fetchActivity: fetchActivity,
     saveDraft: saveDraft,
     _config: { get clientId() { return CLIENT_ID; }, scopes: SCOPES },

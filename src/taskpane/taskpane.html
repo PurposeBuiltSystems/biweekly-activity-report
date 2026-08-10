@@ -11,13 +11,18 @@
   <!-- MSAL Browser (provides createNestablePublicClientApplication for NAA) -->
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.28.1/lib/msal-browser.min.js"></script>
 
-  <link rel="stylesheet" href="taskpane.css?v=7" />
+  <link rel="stylesheet" href="taskpane.css?v=8" />
 </head>
 <body>
   <header class="app-head">
     <h1>Biweekly Activity Report</h1>
     <p class="sub">Your meetings and sent email, turned into a timesheet diary.</p>
   </header>
+  <!-- Certification 1100.5.7.1: a visible way out wherever there is a way in. -->
+  <div id="authRow" class="auth-row">
+    <span id="authWho">Not signed in</span>
+    <button id="signOut" class="linkish" type="button" hidden>Sign out</button>
+  </div>
 
   <section class="controls">
     <button id="generate" class="primary">Generate report</button>
@@ -82,8 +87,8 @@
 
   <!-- Load logic in order: data layer, pure report builder, then UI wiring.
        ?v= cache-buster — bump on each deploy so the Outlook webview fetches fresh JS. -->
-  <script src="../graph.js?v=7"></script>
-  <script src="../report.js?v=7"></script>
-  <script src="taskpane.js?v=7"></script>
+  <script src="../graph.js?v=8"></script>
+  <script src="../report.js?v=8"></script>
+  <script src="taskpane.js?v=8"></script>
 </body>
 </html>
