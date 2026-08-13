@@ -42,11 +42,35 @@
     return pcaPromise;
   }
 
-  /**
-   * Signed-in account, or null. Lets the pane say who is signed in and
-   * decide whether Sign out has anything to act on.
-   */
+  // --- add-in sign-out state -------------------------------------------
+  //
+  // Certification rejected the naive version on a sibling add-in: "after
+  // clicking sign-out there is no response or not signed out." The reason is
+  // structural. Under nested app authentication Outlook owns the session and
+  // getAllAccounts() reports the HOST's account, not a cache this add-in
+  // controls - so clearing MSAL's cache changes nothing visible, the next
+  // silent acquisition succeeds anyway, and the pane redraws as signed in.
+  //
+  // A sign-out this add-in cannot deliver should not be offered. What it CAN
+  // deliver is refusing to act until the user authenticates again: while
+  // signed out it reports itself signed out and will not use a silent token,
+  // so the next action raises a real prompt. Outlook's own session is
+  // untouched, and the pane says so.
+  var SIGNED_OUT_KEY = "addinSignedOut";
+  var signedOut = false;
+  try { signedOut = Office.context.roamingSettings.get(SIGNED_OUT_KEY) === true; } catch (e) { signedOut = false; }
+
+  function setSignedOut(v) {
+    signedOut = !!v;
+    try {
+      Office.context.roamingSettings.set(SIGNED_OUT_KEY, signedOut);
+      Office.context.roamingSettings.saveAsync(function () {});
+    } catch (e) { /* in-memory is still correct for this session */ }
+  }
+
+  /** Signed-in account, or null. Reports null while signed out, by design. */
   async function currentAccount() {
+    if (signedOut) { return null; }
     try {
       var pca = await getPca();
       var accts = (pca.getAllAccounts && pca.getAllAccounts()) || [];
@@ -55,27 +79,33 @@
   }
 
   /**
-   * Sign out of the ADD-IN. Certification policy 1100.5.7.1 requires a way
-   * out wherever there is a way in. Under nested app authentication Outlook
-   * owns the session and no add-in can end it, so this clears every token
-   * and account this add-in has cached - and the pane says exactly that
-   * rather than implying more than it does.
+   * Sign out of the add-in. The state flips SYNCHRONOUSLY before any awaiting
+   * so the pane can respond instantly - awaiting a broker handshake first is
+   * the "no response" half of the finding. Cache clearing is best-effort on
+   * top; the enforced state is what makes this real.
    */
-  async function signOut() {
-    var pca = null;
-    try { pca = await getPca(); } catch (e) { /* nothing cached to clear */ }
-    if (pca) {
-      var accts = (pca.getAllAccounts && pca.getAllAccounts()) || [];
-      for (var i = 0; i < accts.length; i++) {
-        try {
-          if (pca.clearCache) { await pca.clearCache({ account: accts[i] }); }
-          else if (pca.logoutPopup) { await pca.logoutPopup({ account: accts[i] }); }
-        } catch (e) { /* keep clearing the rest */ }
-      }
-    }
-    pcaPromise = null;   // force a fresh broker handshake next time
-    return true;
+  function signOut() {
+    setSignedOut(true);
+    var pending = pcaPromise;      // only clear what exists; never start a handshake here
+    pcaPromise = null;
+    if (!pending) { return Promise.resolve(true); }
+    return Promise.resolve(pending).then(function (pca) {
+      var accts = (pca && pca.getAllAccounts && pca.getAllAccounts()) || [];
+      var chain = Promise.resolve();
+      accts.forEach(function (a) {
+        chain = chain.then(function () {
+          if (pca.clearCache) { return pca.clearCache({ account: a }); }
+          if (pca.logoutPopup) { return pca.logoutPopup({ account: a }); }
+        }).catch(function () { /* best effort; the enforced state stands */ });
+      });
+      return chain.then(function () { return true; });
+    }).catch(function () { return true; });
   }
+
+  /** True while the user has signed the add-in out. */
+  function isSignedOut() { return signedOut; }
+
+
 
 
   /**
@@ -99,6 +129,8 @@
     var pca = await withTimeout(getPca(), 20000,
       "Sign-in didn't start. Fully quit Outlook (Cmd+Q) and reopen, then try again.");
     try {
+      // Signed out means signed out: skip silent so the user must re-authenticate.
+      if (signedOut) { throw new Error("signed out of the add-in"); }
       return (await withTimeout(pca.acquireTokenSilent({ scopes: SCOPES }), 20000, "silent timeout")).accessToken;
     } catch (e) {
       var interactive = await withTimeout(
@@ -106,6 +138,7 @@
         "Sign-in didn't finish. A Microsoft sign-in window may have opened behind Outlook — " +
         "check for it (or Mission Control), finish signing in, and click again. If no window " +
         "appeared at all, fully quit Outlook (Cmd+Q), reopen, and retry.");
+      setSignedOut(false);   // a real interactive sign-in ends the signed-out state
       return interactive.accessToken;
     }
   }
@@ -322,6 +355,7 @@
   var GraphData = {
     signOut: signOut,
     currentAccount: currentAccount,
+    isSignedOut: isSignedOut,
     fetchActivity: fetchActivity,
     saveDraft: saveDraft,
     _config: { get clientId() { return CLIENT_ID; }, scopes: SCOPES },
