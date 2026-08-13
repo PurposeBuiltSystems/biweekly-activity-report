@@ -69,6 +69,25 @@
   }
 
   /** Signed-in account, or null. Reports null while signed out, by design. */
+
+  /**
+   * Microsoft Graph throttles, and this add-in makes bursts of calls - a
+   * records bundle or a bulk post is dozens to hundreds. An unretried 429
+   * aborts the whole run part-way, which is the worst possible failure for
+   * work that is half-written. One respectful retry honouring Retry-After
+   * absorbs the overwhelming majority of throttling without hammering the
+   * service; anything past that is a real outage and should surface.
+   */
+  async function fetchRetry(url, opts) {
+    var res = await fetch(url, opts);
+    if (res.status === 429 || res.status === 503) {
+      var wait = Number(res.headers.get("Retry-After") || 3) * 1000;
+      await new Promise(function (r) { setTimeout(r, Math.min(wait, 15000)); });
+      res = await fetch(url, opts);
+    }
+    return res;
+  }
+
   async function currentAccount() {
     if (signedOut) { return null; }
     try {
@@ -151,7 +170,7 @@
   async function graph(token, path, prefer) {
     var headers = { Authorization: "Bearer " + token };
     if (prefer) headers["Prefer"] = prefer;
-    var res = await fetch(GRAPH + path, { headers: headers });
+    var res = await fetchRetry(GRAPH + path, { headers: headers });
     if (!res.ok) {
       var text = await res.text();
       throw new Error("Graph GET " + path + " -> " + res.status + " " + text);
@@ -339,7 +358,7 @@
   /** Create a draft email with the report (mirrors the macro's m.Display). */
   async function saveDraft(subject, htmlBody) {
     var token = await getToken();
-    var res = await fetch(GRAPH + "/me/messages", {
+    var res = await fetchRetry(GRAPH + "/me/messages", {
       method: "POST",
       headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       body: JSON.stringify({
