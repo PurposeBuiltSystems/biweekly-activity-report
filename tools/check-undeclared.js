@@ -167,16 +167,27 @@ function lineOf(src, index) {
   return line;
 }
 
+/*
+ * Every .js under src/, found by walking rather than by a hand-kept list.
+ *
+ * The list named src, src/taskpane and src/commands. Any other directory -
+ * a new src/mobile, say - was simply not checked, and the tool reported
+ * success over a set that quietly excluded the newest code. That is the
+ * worst way for a linter to fail. Walking means a new directory is covered
+ * the day it appears.
+ */
 function defaultTargets() {
   const out = [];
-  const roots = ["src", path.join("src", "taskpane"), path.join("src", "commands")];
-  roots.forEach(function (dir) {
-    let names = [];
-    try { names = fs.readdirSync(dir); } catch (e) { return; }
-    names.filter(function (n) { return n.endsWith(".js"); })
-         .forEach(function (n) { out.push(path.join(dir, n)); });
-  });
-  return out;
+  (function walk(dir) {
+    let entries = [];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    entries.forEach(function (e) {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { if (e.name !== "node_modules") { walk(full); } }
+      else if (e.name.endsWith(".js")) { out.push(full); }
+    });
+  })("src");
+  return out.sort();
 }
 
 let bad = 0;
