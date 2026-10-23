@@ -16,7 +16,7 @@
 <body>
   <header class="app-head">
     <h1>Biweekly Activity Report</h1>
-    <p class="sub">Your meetings and sent email, turned into a timesheet diary.</p>
+    <p class="sub">Your meetings and email, turned into an estimated activity diary.</p>
   </header>
   <!-- Certification 1100.5.7.1: a visible way out wherever there is a way in. -->
   <div id="authRow" class="auth-row">
@@ -82,13 +82,14 @@
       <button id="copyText">Copy as text</button>
       <button id="draft" class="primary">Save to Drafts</button>
     </div>
+    <p class="hint">Hours are estimates from calendar and email activity. Check actual attendance and time worked before using the report for billing or a timesheet.</p>
     <div id="preview"></div>
   </section>
 
   <!-- Load logic in order: data layer, pure report builder, then UI wiring.
        ?v= cache-buster — bump on each deploy so the Outlook webview fetches fresh JS. -->
-  <script src="../graph.js?v=10"></script>
-  <script src="../report.js?v=10"></script>
+  <script src="../graph.js?v=11"></script>
+  <script src="../report.js?v=11"></script>
   <script src="taskpane.js?v=10"></script>
 </body>
 </html>

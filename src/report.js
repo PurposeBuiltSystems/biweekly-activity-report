@@ -294,6 +294,7 @@
 
   function renderText(r) {
     var out = "Activity diary for " + r.rangeLabel + "\n";
+    out += "Hours are estimates from calendar and email activity. Verify actual attendance and time worked before billing or timesheet use.\n";
     if (r.project) {
       out += (r.project.only ? "FILTERED TO PROJECT: " : "Project: ") + r.project.name +
         " \u2014 " + r.project.hours.toFixed(2) + " project hours (" +
@@ -343,6 +344,7 @@
     var t = r.totals, h = [];
     h.push('<div class="bar-report">');
     h.push('<h2>Activity diary</h2>');
+    h.push('<p class="muted">Hours are estimates from calendar and email activity. Verify actual attendance and time worked before billing or timesheet use.</p>');
     h.push('<p class="range">' + escapeHtml(r.rangeLabel) + "</p>");
 
     h.push('<div class="dash">');
@@ -413,7 +415,7 @@
 
     h.push('<div class="totals">');
     r.weekTotals.forEach(function (hrs, i) { h.push("<div>Week " + (i + 1) + ": <b>" + hrs.toFixed(2) + " h</b></div>"); });
-    h.push('<div class="grand">Biweekly total: <b>' + t.estimatedHours.toFixed(2) + " h</b></div>");
+    h.push('<div class="grand">Estimated biweekly total: <b>' + t.estimatedHours.toFixed(2) + " h</b></div>");
     h.push("</div>");
 
     h.push("</div>");

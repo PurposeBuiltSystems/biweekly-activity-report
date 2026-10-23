@@ -29,6 +29,8 @@
   var SCOPES = ["Calendars.Read", "Mail.ReadWrite"]; // Mail.ReadWrite covers reading Sent + creating the draft
 
   var pcaPromise = null;
+  var authEpoch = 0;
+  var authenticatedAs = null;
 
   function getPca() {
     if (!pcaPromise) {
@@ -81,8 +83,14 @@
   async function fetchRetry(url, opts) {
     var res = await fetch(url, opts);
     if (res.status === 429 || res.status === 503) {
-      var wait = Number(res.headers.get("Retry-After") || 3) * 1000;
-      await new Promise(function (r) { setTimeout(r, Math.min(wait, 15000)); });
+      var retryAfter = res.headers.get("Retry-After");
+      var wait = retryAfter && /^\d+(\.\d+)?$/.test(retryAfter.trim())
+        ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now();
+      if (!isFinite(wait)) { wait = 3000; }
+      wait = Math.max(0, wait);
+      // Surface long throttles rather than retrying before the server allows it.
+      if (wait > 15000) { return res; }
+      await new Promise(function (r) { setTimeout(r, wait); });
       res = await fetch(url, opts);
     }
     return res;
@@ -90,6 +98,7 @@
 
   async function currentAccount() {
     if (signedOut) { return null; }
+    if (authenticatedAs) { return authenticatedAs; }
     try {
       var pca = await getPca();
       var accts = (pca.getAllAccounts && pca.getAllAccounts()) || [];
@@ -104,6 +113,8 @@
    * top; the enforced state is what makes this real.
    */
   function signOut() {
+    authEpoch++;
+    authenticatedAs = null;
     setSignedOut(true);
     var pending = pcaPromise;      // only clear what exists; never start a handshake here
     pcaPromise = null;
@@ -144,19 +155,36 @@
     ]);
   }
 
+  function accountLabel(result) {
+    if (result.account) { return result.account.username || result.account.name || "signed in"; }
+    try { return Office.context.mailbox.userProfile.emailAddress || "signed in"; }
+    catch (e) { return "signed in"; }
+  }
+
   async function getToken() {
+    var epoch = authEpoch;
+    function checkSession() {
+      if (epoch !== authEpoch) { throw new Error("Sign-in cancelled because the add-in session changed."); }
+    }
     var pca = await withTimeout(getPca(), 20000,
       "Sign-in didn't start. Fully quit Outlook (Cmd+Q) and reopen, then try again.");
+    checkSession();
     try {
       // Signed out means signed out: skip silent so the user must re-authenticate.
       if (signedOut) { throw new Error("signed out of the add-in"); }
-      return (await withTimeout(pca.acquireTokenSilent({ scopes: SCOPES }), 20000, "silent timeout")).accessToken;
+      var silent = await withTimeout(pca.acquireTokenSilent({ scopes: SCOPES }), 20000, "silent timeout");
+      checkSession();
+      authenticatedAs = accountLabel(silent);
+      return silent.accessToken;
     } catch (e) {
+      checkSession();
       var interactive = await withTimeout(
         pca.acquireTokenPopup({ scopes: SCOPES }), 120000,
         "Sign-in didn't finish. A Microsoft sign-in window may have opened behind Outlook — " +
         "check for it (or Mission Control), finish signing in, and click again. If no window " +
         "appeared at all, fully quit Outlook (Cmd+Q), reopen, and retry.");
+      checkSession();
+      authenticatedAs = accountLabel(interactive);
       setSignedOut(false);   // a real interactive sign-in ends the signed-out state
       return interactive.accessToken;
     }
@@ -187,8 +215,12 @@
       var page = await graph(token, url, prefer);
       items = items.concat(page.value || []);
       var next = page["@odata.nextLink"];
+      if (next && (next.indexOf(GRAPH + "/") !== 0 || /[\u0000-\u0020]/.test(next))) {
+        throw new Error("Graph returned an unsupported paging URL.");
+      }
       url = next ? next.substring(GRAPH.length) : null;
     }
+    if (url) { throw new Error("Graph results exceeded the scan limit. Narrow the date range or selection and try again."); }
     return items;
   }
 
